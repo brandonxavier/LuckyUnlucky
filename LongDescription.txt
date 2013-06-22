@@ -1,0 +1,29 @@
+Lucky/Unlucky Number
+
+This is a variation on the classic "guess the number I'm thinking of" game with a 
+few twists:
+
+1.      If the unlucky number is guessed, the game starts over and all the numbers 
+	reset.
+2.      Both numbers are randomly picked and are kept secret - the broadcaster 
+	finds out with everybody else what the numbers are.
+3.      To partially compensate for the secretness (?) of the numbers, the unlucky 
+	number will ALMOST always be lower than the lucky number.
+
+With the unlucky number factor, token counts can go up dramatically.  The following 
+are some results of one million run simulations (assuming no duplicate tips (which 
+would only increase the average) and completely random tips):
+
+Range/Average Income/Average w/o Unlucky #
+1-10   39    30
+1-20   145  110
+5-15    9      59
+5-20    140  106
+10-20  119   89
+10-30  291   219
+20-30  198   149
+20-40   439   329
+30-50   584   440
+1-100   3391 2551  (Good luck with this one!)
+
+Best of Luck! And Enjoy!
