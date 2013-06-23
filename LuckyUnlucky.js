@@ -1,8 +1,8 @@
 
 /**
  * Created with JetBrains WebStorm
- * User: brandonxavier
- * Date: 6/20/13
+ * User: brandonxavier (brandonxavier421@gmail.com)
+ * Date: 6/1/13
  *
 
  Copyright 2013 Brandon Xavier (brandonxavier421@gmail.com)
