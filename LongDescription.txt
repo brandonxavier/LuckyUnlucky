@@ -1,5 +1,17 @@
 Lucky/Unlucky Number
 
+NEW:  Users can opt out of playing and just tip by putting the word 'optout'
+      anywhere in their tip note.
+
+NEW:  Tips greater than the highest remaining number available will get played
+      against the highest remaining numbers automatically.  THESE ARE CONSIDERED
+      SAFE NUMBERS (they will not be "unlucky").  For example if the numbers left
+      are 1-20,24,25,26,27,28,29,30 and somebody tips 100 tokens, then the
+      numbers 30, 29 & 28 will be removed from the board (the remaining number 13
+      will NOT be auto played since it can't be certain it's safe at this time).
+
+===============================
+
 This is a variation on the classic "guess the number I'm thinking of" game with a 
 few twists:
 

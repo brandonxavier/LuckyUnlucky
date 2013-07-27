@@ -27,13 +27,19 @@
 //
 // goodbadluck.js
 //
-// Version:     1.1
+// Version:     1.2
 
 // The standard "guess a number" game with a slight twist:  If an unlucky
 // number is guessed, the numbers start over from scratch.  Additionally,
 // unless the "lucky" number is equal to the min, the unlucky number will
 // always be lower than the lucky number (to foil those who start at the bottom
 // and always guess the next lowest number)
+//
+// Version 1.2
+//      - Added optout option
+//      - Allowed for auto play of larger tips
+//      - Fixed game over bug
+//      - Change some chatNotice options
 //
 // Version 1.1
 //      - Added /rules command to show app details to the intuitionally-challenged
@@ -55,10 +61,31 @@ var ostr = "";
 var space20 = "                    ";
 var net = 0, bonus = 0;
 
+var bcp = {
+    aqua: "#00FFFF",
+    black: "#000000",
+    blue: "#0000FF",
+    fuchsia: "#FF00FF",
+    gray: "#808080",
+    grey: "#808080",
+    green: "#008000",
+    lime: "#00FF00",
+    maroon: "#800000",
+    navy: "#000080",
+    olive: "#808000",
+    orange: "#FFA500",
+    purple: "#800080",
+    red: "#FF0000",
+    silver: "#C0C0C0",
+    teal: "#008080",
+    white: "#FFFFFF",
+    yellow: "#FFFF00"
+};
+
 cb.settings_choices = [
-    {name: 'lowlimit', type: 'int', minValue: 1, maxValue: 499, defaultValue: 10,
+    {name: 'lowlimit', type: 'int', minValue: 5, maxValue: 499, defaultValue: 11,
         label: "Lower Limit: "},
-    {name: 'highlimit', type: 'int', minValue: 1, maxValue: 500, defaultValue: 30,
+    {name: 'highlimit', type: 'int', minValue: 10, maxValue: 500, defaultValue: 20,
         label: "Upper Limit: "},
     {name: 'description', type: 'str', minLength: 1, maxLength: 255,
         label: 'Reward ("... to _____ ")'}
@@ -79,30 +106,59 @@ cb.onDrawPanel(function(user) {
 
 cb.onTip(function(tip){
 
-    net += tip['amount'];
+    var grossTip = parseInt(tip['amount']);
+    var workingTip = 0;
 
-    if ( tip['amount'] == lucky ) {
-        cb.changeRoomSubject(tip['from_user'] + " has tipped the LUCKY number!");
-        ostr = space20 + space20 + space20 + space20 + space20; // yes, I know this is fugly and amateurish
-        cb.drawPanel();
-        cb.chatNotice ("Total tokens = " + net + " Duplicate and Out of Range Tips = " + bonus, cb.room_slug);
+    if ( tip['message'].match( /optout/i ) != null ) {
+        return;
     }
-    else {
-        if ( tip['amount'] == unlucky ) {
-            cb.chatNotice("\nOh no! The UNLUCKY number was tipped! Numbers reset ('lucky' was " + lucky + ")" );
-            reset_numbers();
-            ShowIntro();
+
+    net += grossTip;
+
+    while ( lucky != 0 && grossTip > 0 ) {
+        if ( grossTip >= findHighRemaining() ) {
+            workingTip = findHighRemaining();
+            grossTip -= workingTip;
+        } else {
+            // This ensures that we only auto play safe numbers (i.e. starting
+            // at the highest and going down CONSECUTIVELY).  Otherwise, consider
+            // something like a range of 11-30 . . . a tip of 50 comes in . . .
+            // 30 (the max) would be safe, but no telling about 20 - so don't
+            // auto play it
+            if ( grossTip == parseInt(tip['amount']) ) {
+                workingTip = grossTip;
+                grossTip = 0;
+            }  else {
+                workingTip = 0; // Dropping the final remainder to prevent auto play
+                grossTip = 0;
+            }
+        }
+
+        if ( workingTip == lucky ) {
+            cb.changeRoomSubject( tip['from_user'] +
+                    " has tipped the LUCKY number! ('lucky' was " + lucky + ")");
+            ostr = space20 + space20 + space20 + space20 + space20; // yes, I know this is fugly and amateurish
+            cb.drawPanel();
+            cb.chatNotice( "Total tokens = " + net + " Duplicate and Out of Range Tips = " + bonus, cb.room_slug );
+            lucky = 0; // Game over
         }
         else {
-            if ( tip['amount'] >= cb.settings.lowlimit && tip['amount'] <= cb.settings.highlimit ) {
-                if ( picked[tip['amount']] == 1 )
-                    bonus += tip['amount'];
-                picked[tip['amount']] = 1;
-                --remaining;
-                BuildRemaining();
+            if ( workingTip == unlucky ) {
+                cb.chatNotice( "\nOh no! The UNLUCKY number was tipped! Numbers reset ('lucky' was " + lucky + ")","","",bcp.red,"bolder" );
+                reset_numbers();
+                ShowIntro();
             }
-            else
-                bonus += tip['amount'];
+            else {
+                if ( workingTip >= cb.settings.lowlimit && workingTip <= cb.settings.highlimit ) {
+                    if ( picked[workingTip] == 1 )
+                        bonus += workingTip;
+                    picked[workingTip] = 1;
+                    --remaining;
+                    BuildRemaining();
+                }
+                else
+                    bonus += workingTip;
+            }
         }
     }
 });
@@ -159,7 +215,8 @@ function BuildRemaining() {
 
 function reset_numbers() {
 
-    lucky = getRandomNumber(cb.settings.lowlimit, cb.settings.highlimit);
+    // Minor cheating here - lucky will never be the min #
+    lucky = getRandomNumber(cb.settings.lowlimit + 1, cb.settings.highlimit);
     if ( lucky > cb.settings.lowlimit ) {
         unlucky = lucky;
         while (unlucky >= lucky )
@@ -179,13 +236,23 @@ function reset_numbers() {
 
 }
 
+function findHighRemaining() {
+
+    var x = cb.settings.highlimit;
+    while ( picked[x] == 1 ) {
+        x--;
+    }
+
+    return x;
+}
 function ShowIntro() {
     cb.chatNotice("\nTip the LUCKY number from " + cb.settings.lowlimit + "-" +
         cb.settings.highlimit + " to " + cb.settings.description +
         "\nBeware of the UNLUCKY number - it resets the game with new numbers" +
-        "\nThe broadcaster does NOT know either number!\nType /rules for complete details." );
+        "\nThe broadcaster does NOT know either number!\nType /rules for complete details.\n" +
+        "\nTo tip without playing, put the word 'optout' in your tip note\n","","",bcp.blue,"bold");
 
-    cb.setTimeout(ShowIntro, 600000);
+    cb.setTimeout(ShowIntro, 900000);
 
 }
 
@@ -204,8 +271,11 @@ function ShowRules(toUser) {
             "The numbers that have NOT been tipped yet\n" +
             "are shown in the panel below the video feed.\n\n" +
             "The broadcaster does NOT know either number!!!\n\n" +
-            "Good Luck and Enjoy the Show!\n",
-        toUser);
+            "Good Luck and Enjoy the Show!\n\n" +
+            "NEW: To tip without playing, put the word optout in your tip note\n\n" +
+            "NEW: Tips greater than the highest picked number will\n" +
+            "     SAFELY pick the highest available numbers\n",
+        toUser, "",bcp.blue,"bold");
 }
 
 function Init() {
@@ -218,4 +288,7 @@ function Init() {
 
 }
 
-Init();
+
+if (!!AppDevKit == false ) {
+	Init();
+}
